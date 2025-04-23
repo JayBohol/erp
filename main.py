@@ -37,7 +37,8 @@ def logo():
         border_style="bold purple"))
 
 def clear():
-    sm('cls' if pf in ['win32', 'win64'] else 'clear')
+    sp(1)  # Sleep delay, can be removed if not needed
+    os.system('cls' if os.name in ['nt', 'ce'] else 'clear')  # Clear screen
     logo()
 
 # ─── Facebook Token Getter ───────────────────────────────────────────────────

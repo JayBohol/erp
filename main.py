@@ -10,6 +10,12 @@ from time import sleep as sp
 from urllib.parse import urlparse, parse_qs
 from rich import print as rp
 from rich.panel import Panel as pan
+from dotenv import load_dotenv
+load_dotenv()
+
+email = os.getenv("EMAIL")
+password = os.getenv("PASSWORD")
+
 
 # ─── Color Definitions ───────────────────────────────────────────────────────
 R = "[bold red]"

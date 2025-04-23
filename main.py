@@ -2,22 +2,13 @@ import os
 import uuid
 import base64
 import random
-import requests
 import httpx
-from os import system as sm
-from sys import platform as pf
 from time import sleep as sp
 from urllib.parse import urlparse, parse_qs
 from rich import print as rp
 from rich.panel import Panel as pan
-from dotenv import load_dotenv
-load_dotenv()
 
-email = os.getenv("EMAIL")
-password = os.getenv("PASSWORD")
-
-
-# ─── Color Definitions ───────────────────────────────────────────────────────
+# Color Definitions
 R = "[bold red]"
 G = "[bold green]"
 Y = "[bold yellow]"
@@ -28,7 +19,8 @@ W = "[bold white]"
 
 TOKEN_FILE = os.path.join(os.getcwd(), "accesstoken.txt")
 
-# ─── UI Functions ────────────────────────────────────────────────────────────
+# ─── Utility & UI ────────────────────────────────────────────────────────────
+
 def randc():
     return random.choice([R, G, Y, B, M, C])
 
@@ -40,15 +32,16 @@ def logo():
 \\    \\_\\  \\|        \\  |    |   
  \\______  /_______  /  |____|   
         \\/        \\/""",
-        title=f"{Y}FB TOKEN + REACT TOOL",
-        subtitle=f"{R}BY GABO",
+        title=f"{Y}FACEBOOK AUTOMATION SUITE",
+        subtitle=f"{R}DEVELOPED BY GABO",
         border_style="bold purple"))
 
 def clear():
     sm('cls' if pf in ['win32', 'win64'] else 'clear')
     logo()
 
-# ─── Token Getter ────────────────────────────────────────────────────────────
+# ─── Facebook Token Getter ───────────────────────────────────────────────────
+
 def get_fb_token(email, password):
     base_access_token = '350685531728|62f8ce9f74b12f84c123cc23437a4a32'
     data = {
@@ -98,8 +91,21 @@ def read_access_token():
 
 def token_getter_flow():
     clear()
-    email = input(f"{C}Email/UID: {Y}")
-    password = input(f"{C}Password: {Y}")
+    rp(pan(f"{Y}[1]{G} Manual Entry\n{Y}[2]{G} File Path (email:password per line)",
+           border_style="bold purple"))
+    choice = input(f"{C}Choose method [1/2]: {Y}").strip()
+
+    # ─ Manual ─
+    clear()
+    # Get credentials from environment variables
+    email = os.getenv("FB_EMAIL")
+    password = os.getenv("FB_PASSWORD")
+
+    if not email or not password:
+        rp(f"{R}No email or password found in environment variables.")
+        input(f"{C}Press Enter to return...")
+        return
+
     token = get_fb_token(email, password)
     clear()
     if token:
@@ -111,6 +117,7 @@ def token_getter_flow():
     input(f"{C}Press Enter to return...")
 
 # ─── URL / ID Helpers ────────────────────────────────────────────────────────
+
 def convert_post_link(url):
     try:
         p = urlparse(url)
@@ -134,14 +141,15 @@ def extract_comment_id_from_url(url):
     except:
         return None
 
-# ─── Graph API Actions ──────────────────────────────────────────────────────
-def react_to_post(token, post_id, reaction_type="LIKE"):
+def extract_user_id_from_url(url):
     try:
-        url = f"https://graph.facebook.com/v19.0/{post_id}/reactions"
-        res = requests.post(url, params={"type": reaction_type, "access_token": token})
-        return res.json()
+        p = urlparse(url)
+        uid = parse_qs(p.query).get('id', [None])[0]
+        return uid
     except:
         return None
+
+# ─── Graph API Actions ──────────────────────────────────────────────────────
 
 def react_to_comment(token, comment_id, reaction_type="LIKE"):
     try:
@@ -151,66 +159,20 @@ def react_to_comment(token, comment_id, reaction_type="LIKE"):
     except:
         return None
 
-# ─── Automation Flows ────────────────────────────────────────────────────────
-def auto_post_reaction_flow():
-    clear()
-    token = read_access_token()
-    if not token:
-        rp(f"{R}No token found. Please get one first.")
-        input("Press Enter...")
-        return
+def react_to_post(token, post_id, reaction_type="LIKE"):
+    try:
+        url = f"https://graph.facebook.com/v19.0/{post_id}/reactions"
+        res = requests.post(url, params={"type": reaction_type, "access_token": token})
+        return res.json()
+    except:
+        return None
 
-    url = input(f"{C}Post URL: {Y}")
-    rtype = input(f"{C}Reaction (LIKE/LOVE/HAHA/WOW/SAD/ANGRY): {Y}").upper()
-    count = int(input(f"{C}How many times? {Y}"))
+# ─── Main Loop ───────────────────────────────────────────────────────────────
 
-    pid = convert_post_link(url)
-    if not pid:
-        rp(f"{R}Invalid URL.")
-        input("Enter to return...")
-        return
-
-    for _ in range(count):
-        res = react_to_post(token, pid, rtype)
-        if res and 'success' in res:
-            rp(f"{G}Reacted!")
-        else:
-            rp(f"{R}Failed.")
-        sp(1)
-    input("Done. Enter to return...")
-
-def auto_comment_reaction_flow():
-    clear()
-    token = read_access_token()
-    if not token:
-        rp(f"{R}No token found. Please get one first.")
-        input("Press Enter...")
-        return
-
-    url = input(f"{C}Comment URL: {Y}")
-    rtype = input(f"{C}Reaction (LIKE/LOVE/HAHA/WOW/SAD/ANGRY): {Y}").upper()
-    count = int(input(f"{C}How many times? {Y}"))
-
-    cid = extract_comment_id_from_url(url)
-    if not cid:
-        rp(f"{R}Invalid URL.")
-        input("Enter to return...")
-        return
-
-    for _ in range(count):
-        res = react_to_comment(token, cid, rtype)
-        if res and 'success' in res:
-            rp(f"{G}Reacted!")
-        else:
-            rp(f"{R}Failed.")
-        sp(1)
-    input("Done. Enter to return...")
-
-# ─── Main Menu ───────────────────────────────────────────────────────────────
 def main_menu():
     clear()
     rp(pan(f"""
-{Y}[1]{G} Get Facebook Token
+{Y}[1]{G} Token Getter (Manual)
 {Y}[2]{G} Auto Post Reaction
 {Y}[3]{G} Auto Comment Reaction
 {Y}[4]{R} Exit""", border_style="bold purple"))
@@ -219,7 +181,7 @@ def main_menu():
 if __name__ == "__main__":
     while True:
         opt = main_menu().strip()
-        if opt == '1': token_getter_flow()
+        if   opt == '1': token_getter_flow()
         elif opt == '2': auto_post_reaction_flow()
         elif opt == '3': auto_comment_reaction_flow()
         elif opt == '4':
